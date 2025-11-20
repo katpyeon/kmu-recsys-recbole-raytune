@@ -1,7 +1,10 @@
-# AutoML and training outputs
+# AutoML and training outputs (NOT tracked)
 log_tensorboard/
 ray_results/
 saved/
+
+# Output results (TRACKED - DO NOT IGNORE)
+# outputs/ folder should be committed to git
 
 # Python
 __pycache__/

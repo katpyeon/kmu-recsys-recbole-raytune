@@ -1,0 +1,17 @@
+{
+  "hyperparameters": {
+    "embedding_size": 256,
+    "n_layers": 1,
+    "reg_weight": 3.8644757872267884e-05,
+    "learning_rate": 0.001094289401434983
+  },
+  "validation_metrics": {
+    "recall@5": 0.0937,
+    "ndcg@5": 0.0604,
+    "recall@10": 0.1465
+  },
+  "timestamp": "2025-11-20 20:17:34",
+  "model": "LightGCN",
+  "device": "mps",
+  "num_trials": 30
+}

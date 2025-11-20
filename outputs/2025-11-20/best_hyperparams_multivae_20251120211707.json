@@ -1,0 +1,20 @@
+{
+  "hyperparameters": {
+    "latent_dimension": 256,
+    "mlp_hidden_size": [
+      512
+    ],
+    "dropout_prob": 0.5551940268555318,
+    "anneal_cap": 0.1,
+    "learning_rate": 0.000995701554631015
+  },
+  "validation_metrics": {
+    "recall@5": 0.0799,
+    "ndcg@5": 0.0515,
+    "recall@10": 0.122
+  },
+  "timestamp": "2025-11-20 21:17:07",
+  "model": "MultiVAE",
+  "device": "mps",
+  "num_trials": 30
+}

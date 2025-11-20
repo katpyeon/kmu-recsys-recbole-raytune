@@ -1,12 +1,30 @@
 #!/usr/bin/env python3
 """
-RecBole AutoML - Hyperparameter Optimization with Ray Tune
+RecBole AutoML - Hyperparameter Optimization with Ray Tune (논문/RecBole 권장 버전)
 
 희소성 99.9% 데이터셋에 대한 추천 모델 하이퍼파라미터 최적화
 - 평가 지표: Recall@5
 - AutoML: Ray Tune (ASHA Scheduler + Optuna TPE)
 - 디바이스: CUDA → MPS → CPU 자동 선택
 - 모델: LightGCN
+
+🔬 논문/RecBole 권장사항 준수:
+- embedding_size: [64, 128, 256] - 64는 LightGCN 원논문 표준값
+- n_layers: [1, 2, 3] - 3은 원논문 권장값
+- reg_weight: [1e-5, 1e-3] - 1e-4는 원논문 최적값
+- learning_rate: [5e-4, 5e-3] - 1e-3 포함 (표준값)
+- Trial 수: 50개 (넓은 탐색 공간 대응)
+
+⚡ 성능 최적화:
+- 배치 크기: train=4096, eval=102400 (대폭 증가)
+- DataLoader workers: 4 (병렬 데이터 로딩)
+- cuDNN benchmark: 활성화 (1.3~1.7배 가속)
+- 동시 실행: 6개 trials (3배 병렬화)
+- 예상 소요 시간: ~12분
+
+📚 참고:
+- LightGCN 원논문: He et al., SIGIR 2020
+- RecBole 문서: https://recbole.io/docs/
 """
 
 import os
@@ -238,18 +256,25 @@ base_config = {
     # (PyTorch 에러: "addmm_sparse_cuda" not implemented for 'Half')
 }
 
-# 하이퍼파라미터 탐색 공간 (89개 trials 분석 기반 최적화)
+# 하이퍼파라미터 탐색 공간 (논문/RecBole 권장사항 준수)
 # 근거:
-# - embedding_size: 32, 64는 256 대비 -18% 열등 (실험적)
-# - n_layers: 3-4층은 over-smoothing으로 대부분 실패 (이론적 + 실험적)
-# - reg_weight: >0.001에서 성능 저하 일관성 (실험적)
-# - learning_rate: 극단값 제거로 안정성 확보 (실험적)
-# 일반화: 99.9% 희소 그래프 데이터 일반에 적용 가능
+# - embedding_size [64, 128, 256]:
+#   * 64: LightGCN 원논문 (He et al., 2020) 표준값
+#   * 128, 256: 99.9% 희소 데이터에 적합한 큰 표현력
+# - n_layers [1, 2, 3]:
+#   * 3: LightGCN 원논문 권장값 (최적 그래프 정보 활용)
+#   * 1-2: 얕은 레이어로 over-smoothing 방지
+# - reg_weight [1e-5, 1e-3]:
+#   * 1e-4: 원논문에서 대부분의 경우 최적값
+#   * RecBole 권장 범위 준수
+# - learning_rate [5e-4, 5e-3]:
+#   * 1e-3 포함: 원논문 및 RecBole 표준값
+#   * 안정적 학습 범위
 search_space = {
-    'embedding_size': tune.choice([128, 256]),       # [32, 64, 128, 256] → 50% 축소
-    'n_layers': tune.choice([1, 2]),                 # [1, 2, 3, 4] → 50% 축소
-    'reg_weight': tune.loguniform(1e-5, 1e-3),      # [1e-5, 1e-2] → 상한 축소
-    'learning_rate': tune.loguniform(5e-4, 5e-3),   # [1e-4, 1e-2] → 범위 축소
+    'embedding_size': tune.choice([64, 128, 256]),  # 원논문 64 추가
+    'n_layers': tune.choice([1, 2, 3]),             # 원논문 3 추가
+    'reg_weight': tune.loguniform(1e-5, 1e-3),      # 원논문 1e-4 포함
+    'learning_rate': tune.loguniform(5e-4, 5e-3),   # 원논문 1e-3 포함
 }
 
 print(f"✅ 기본 설정 완료")
@@ -261,13 +286,15 @@ print(f"   • 배치 크기: train={train_batch_size}, eval={eval_batch_size}")
 print(f"   • DataLoader workers: 4 (병렬 데이터 로딩)")
 print(f"   • cuDNN benchmark: 활성화 (1.3~1.7배 가속)")
 print(f"   • Mixed Precision: 비활성화 (LightGCN sparse 연산 미지원)")
+print(f"   • 동시 실행: 6개 trials (3배 병렬화)")
 print(f"   • 예상 총 속도 향상: 2~4배")
-print(f"\n🔍 하이퍼파라미터 탐색 공간 (최적화됨):")
-print(f"   embedding_size: [128, 256] (32, 64 제거)")
-print(f"   n_layers: [1, 2] (3, 4 제거 - over-smoothing 방지)")
-print(f"   reg_weight: [1e-5, 1e-3] (상한 축소)")
-print(f"   learning_rate: [5e-4, 5e-3] (범위 축소)")
-print(f"   예상 시간 절감: ~38%\n")
+print(f"\n🔍 하이퍼파라미터 탐색 공간 (논문/RecBole 권장):")
+print(f"   embedding_size: [64, 128, 256] - 64는 원논문 표준값")
+print(f"   n_layers: [1, 2, 3] - 3은 원논문 권장값")
+print(f"   reg_weight: [1e-5, 1e-3] - 1e-4는 원논문 최적값")
+print(f"   learning_rate: [5e-4, 5e-3] - 1e-3은 원논문/RecBole 표준")
+print(f"   Trial 수: 50개 (탐색 공간 1.5배 확대)")
+print(f"   예상 소요 시간: ~12분\n")
 
 # ============================================================
 # 5. Trainable 함수 정의
@@ -383,7 +410,7 @@ tuner = tune.Tuner(
     tune_config=tune.TuneConfig(
         scheduler=scheduler,
         search_alg=search_alg,
-        num_samples=30,  # 50 → 30 (탐색 공간 축소에 따라 조정)
+        num_samples=50,  # 논문/RecBole 권장 범위 적용 (탐색 공간 1.5배)
         max_concurrent_trials=max_concurrent_trials,
     ),
     run_config=RunConfig(

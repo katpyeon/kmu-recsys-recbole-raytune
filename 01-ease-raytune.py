@@ -215,19 +215,26 @@ base_config = {
     'show_progress': False,
 }
 
-# 하이퍼파라미터 탐색 공간 (RecBole 문서 + EASE 논문 기반)
+# 하이퍼파라미터 탐색 공간 (개선된 버전)
 # 출처: Steck, "Embarrassingly Shallow Autoencoders for Sparse Data", WWW 2019
 # EASE는 단 하나의 하이퍼파라미터만 튜닝 (reg_weight)
+#
+# 개선 사항:
+# - 기존: choice([10, 100, 250, 500, 1000]) - 좁은 범위, 5개 값만
+# - 개선: loguniform(0.1, 5000.0) - 넓은 범위, 로그 스케일 연속 탐색
+# - 이유: 99.9% 희소 데이터에서 작은 값(0.1~10)도 테스트 필요
 search_space = {
-    'reg_weight': tune.choice([10.0, 100.0, 250.0, 500.0, 1000.0]),  # 기본: 250
+    'reg_weight': tune.loguniform(0.1, 5000.0),  # 로그 스케일 연속 탐색
 }
 
 print(f"✅ 기본 설정 완료")
 print(f"   모델: {MODEL_NAME}")
 print(f"   타겟 메트릭: Recall@5")
 print(f"   디바이스: CPU (EASE는 GPU 미사용)")
-print(f"\n🔍 하이퍼파라미터 탐색 공간 (RecBole 문서 + 논문 기반):")
-print(f"   reg_weight: [10, 100, 250, 500, 1000] (기본: 250)")
+print(f"\n🔍 하이퍼파라미터 탐색 공간 (개선된 버전):")
+print(f"   reg_weight: loguniform(0.1, 5000.0)")
+print(f"   → 로그 스케일 연속 탐색 (작은 값~큰 값 모두 커버)")
+print(f"   → 기존 [10, 100, 250, 500, 1000]에서 대폭 확장")
 print(f"   ⚡ EASE는 단일 하이퍼파라미터 - 매우 빠른 최적화!")
 print(f"   ⚡ Closed-form solution - 반복 학습 불필요\n")
 
@@ -326,7 +333,7 @@ tuner = tune.Tuner(
     tune_config=tune.TuneConfig(
         scheduler=scheduler,
         search_alg=search_alg,
-        num_samples=10,  # EASE는 파라미터 1개이므로 10번이면 충분
+        num_samples=50,  # 10 → 50 (EASE는 빠르므로 충분한 탐색 가능)
         max_concurrent_trials=max_concurrent_trials,
     ),
     run_config=RunConfig(

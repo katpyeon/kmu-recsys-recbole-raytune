@@ -54,6 +54,16 @@ def patched_storage_init(self, *args, **kwargs):
     return original_storage_init(self, *args, **kwargs)
 train_storage.StorageContext.__init__ = patched_storage_init
 
+# PyTorch 2.6+ weights_only 기본값 변경 우회
+# RecBole checkpoint 로딩 시 weights_only=False 필요
+original_torch_load = torch.load
+def patched_torch_load(*args, **kwargs):
+    # weights_only 인자가 명시되지 않은 경우 False로 설정
+    if 'weights_only' not in kwargs:
+        kwargs['weights_only'] = False
+    return original_torch_load(*args, **kwargs)
+torch.load = patched_torch_load
+
 warnings.filterwarnings('ignore')
 
 print("=" * 60)

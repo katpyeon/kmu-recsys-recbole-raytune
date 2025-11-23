@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
 """
-RecBole Ensemble - Reciprocal Rank Fusion (RRF)
+RecBole Ensemble - Reciprocal Rank Fusion (RRF) [FIXED]
 
-4개 모델의 추천 결과를 RRF 알고리즘으로 앙상블:
-- EASE: Recall@5 = 0.0834
-- LightGCN: Recall@5 = 0.0882 (최고)
-- MultiVAE: Recall@5 = 0.0738
-- RecVAE: Recall@5 = 0.0810
+4개 모델의 추천 결과를 RRF 알고리즘으로 앙상블 (2025-11-22 최적화 버전):
+- MultiVAE: Recall@5 = 0.0870 (최고)
+- RecVAE: Recall@5 = 0.0868
+- LightGCN: Recall@5 = 0.0849
+- EASE: Recall@5 = 0.0718
 
 RRF 공식: score(item) = Σ weight / (k + rank)
 - k: RRF constant (기본값 60)
 - rank: 모델별 아이템 순위 (1부터 시작)
-- weight: 모델별 가중치
+- weight: 모델별 가중치 (성능에 비례)
 
-예상 성능 향상: 10-15% (0.09 → 0.10-0.11)
+수정사항:
+1. 신 포맷 제출 파일 사용 (user_id, item_ids - 공백 구분)
+2. 올바른 가중치 (성능 순서대로)
+3. 11/22 최신 최적화 파일 사용
 """
 
 import os
@@ -35,21 +38,21 @@ print("=" * 60)
 print("1. 제출 파일 로드")
 print("=" * 60)
 
-# 최신 제출 파일 경로 (2025-11-21 기준)
+# 최신 제출 파일 경로 (2025-11-22 최적화 버전)
 submission_files = {
-    'EASE': 'outputs/2025-11-20/submit_EASE_RayTune_20251120213417.csv',
-    'LightGCN': 'outputs/2025-11-20/submit_LightGCN_RayTune_20251120234432.csv',
-    'MultiVAE': 'outputs/2025-11-20/submit_MultiVAE_RayTune_20251120212133.csv',
-    'RecVAE': 'outputs/2025-11-20/submit_RecVAE_RayTune_20251120221633.csv',
+    'EASE': 'outputs/2025-11-22/submit_EASE_RayTune_20251122141144.csv',
+    'LightGCN': 'outputs/2025-11-22/submit_LightGCN_RayTune_20251122142021.csv',
+    'MultiVAE': 'outputs/2025-11-22/submit_MultiVAE_RayTune_20251122142530.csv',
+    'RecVAE': 'outputs/2025-11-22/submit_RecVAE_RayTune_20251122143202.csv',
 }
 
-# 데이터 로드
+# 데이터 로드 (신 포맷: user_id, item_ids)
 submissions = {}
 for model_name, file_path in submission_files.items():
     if os.path.exists(file_path):
         df = pd.read_csv(file_path)
         submissions[model_name] = df
-        print(f"✅ {model_name:10s}: {len(df):,}개 추천 ({df['resume_seq'].nunique():,}명)")
+        print(f"✅ {model_name:10s}: {len(df):,}개 사용자")
     else:
         print(f"⚠️  {model_name:10s}: 파일 없음 - {file_path}")
 
@@ -66,13 +69,13 @@ print("=" * 60)
 print("2. RRF 앙상블 설정")
 print("=" * 60)
 
-# 모델별 가중치 (검증 Recall@5 기반)
-# LightGCN > EASE > RecVAE > MultiVAE
+# 모델별 가중치 (검증 Recall@5 기반 - 11/22 최적화 버전)
+# MultiVAE > RecVAE > LightGCN > EASE
 weights = {
-    'LightGCN': 0.35,  # 0.0882 (최고 성능)
-    'EASE': 0.30,      # 0.0834
-    'RecVAE': 0.25,    # 0.0810
-    'MultiVAE': 0.10   # 0.0738 (최저 성능)
+    'MultiVAE': 0.35,  # 0.0870 (최고 성능)
+    'RecVAE': 0.30,    # 0.0868
+    'LightGCN': 0.25,  # 0.0849
+    'EASE': 0.10       # 0.0718 (최저 성능)
 }
 
 # RRF constant

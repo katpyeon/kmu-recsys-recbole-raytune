@@ -1,0 +1,14 @@
+{
+  "hyperparameters": {
+    "reg_weight": 4683.911384549159
+  },
+  "validation_metrics": {
+    "recall@5": 0.0718,
+    "ndcg@5": 0.0473,
+    "recall@10": 0.1098
+  },
+  "timestamp": "2025-11-22 14:11:39",
+  "model": "EASE",
+  "device": "cpu",
+  "num_trials": 50
+}

@@ -1,0 +1,18 @@
+{
+  "hyperparameters": {
+    "embedding_size": 200,
+    "n_layers": 2,
+    "reg_weight": 3.293937045604435e-05,
+    "learning_rate": 0.004278324815105489
+  },
+  "validation_metrics": {
+    "recall@5": 0.0838,
+    "ndcg@5": 0.0562
+  },
+  "test_metrics": {
+    "recall@5": 0.0789,
+    "ndcg@5": 0.053
+  },
+  "improvement_vs_baseline": -0.004400000000000001,
+  "timestamp": "2025-11-23 12:49:26"
+}

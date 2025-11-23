@@ -1,0 +1,19 @@
+{
+  "hyperparameters": {
+    "embedding_size": 256,
+    "n_layers": 2,
+    "reg_weight": 0.00018667336803125705,
+    "learning_rate": 0.0005824597704183265
+  },
+  "validation_metrics": {
+    "recall@5": 0.0257,
+    "ndcg@5": 0.0183,
+    "recall@10": 0.0401
+  },
+  "timestamp": "2025-11-21 16:52:54",
+  "model": "LightGCN",
+  "dataset": "kaggle_recsys_with_negatives",
+  "negative_sampling": "1:1 (Popularity-biased, alpha=0.75)",
+  "device": "cuda",
+  "num_trials": 30
+}

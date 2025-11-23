@@ -1,0 +1,57 @@
+{
+  "hyperparameters": {
+    "latent_dimension": 200,
+    "mlp_hidden_size": [
+      512,
+      256
+    ],
+    "dropout_prob": 0.34784060160122404,
+    "anneal_cap": 0.2,
+    "learning_rate": 0.0007956910764841751
+  },
+  "validation_metrics": {
+    "recall@5": 0.087,
+    "ndcg@5": 0.0572,
+    "recall@10": 0.1311
+  },
+  "mlp_architecture_analysis": {
+    "[512]": {
+      "avg_recall@5": 0.0864,
+      "num_trials": 1
+    },
+    "[600]": {
+      "avg_recall@5": 0.08637500000000001,
+      "num_trials": 4
+    },
+    "[512, 256]": {
+      "avg_recall@5": 0.08620000000000001,
+      "num_trials": 7
+    },
+    "[400, 200]": {
+      "avg_recall@5": 0.0861,
+      "num_trials": 1
+    },
+    "[400]": {
+      "avg_recall@5": 0.08596666666666668,
+      "num_trials": 3
+    },
+    "[800]": {
+      "avg_recall@5": 0.0857,
+      "num_trials": 2
+    },
+    "[600, 300]": {
+      "avg_recall@5": 0.08553333333333334,
+      "num_trials": 3
+    },
+    "[800, 400]": {
+      "avg_recall@5": 0.084975,
+      "num_trials": 4
+    },
+    "[600, 400, 200]": {
+      "avg_recall@5": 0.0842,
+      "num_trials": 2
+    }
+  },
+  "timestamp": "2025-11-23 11:40:58",
+  "experiment": "MLP Architecture Exploration"
+}

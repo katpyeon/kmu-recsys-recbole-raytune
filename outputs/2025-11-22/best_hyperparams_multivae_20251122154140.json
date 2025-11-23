@@ -1,0 +1,20 @@
+{
+  "hyperparameters": {
+    "latent_dimension": 128,
+    "mlp_hidden_size": [
+      512
+    ],
+    "dropout_prob": 0.46063808000891343,
+    "anneal_cap": 0.3,
+    "learning_rate": 0.002540862592051444
+  },
+  "validation_metrics": {
+    "recall@5": 0.0869,
+    "ndcg@5": 0.0577,
+    "recall@10": 0.1306
+  },
+  "timestamp": "2025-11-22 15:41:40",
+  "model": "MultiVAE",
+  "device": "cuda",
+  "num_trials": 30
+}

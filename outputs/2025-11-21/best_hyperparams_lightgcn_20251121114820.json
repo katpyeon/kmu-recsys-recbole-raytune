@@ -1,0 +1,17 @@
+{
+  "hyperparameters": {
+    "embedding_size": 256,
+    "n_layers": 1,
+    "reg_weight": 4.024526603682303e-05,
+    "learning_rate": 0.004015339285217071
+  },
+  "validation_metrics": {
+    "recall@5": 0.0882,
+    "ndcg@5": 0.0559,
+    "recall@10": 0.1393
+  },
+  "timestamp": "2025-11-21 11:48:20",
+  "model": "LightGCN",
+  "device": "cuda",
+  "num_trials": 30
+}

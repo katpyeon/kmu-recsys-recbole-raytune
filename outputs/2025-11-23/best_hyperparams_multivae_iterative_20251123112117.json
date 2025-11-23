@@ -1,0 +1,38 @@
+{
+  "best_iteration": 1,
+  "hyperparameters": {
+    "latent_dimension": 128,
+    "mlp_hidden_size": [
+      600
+    ],
+    "dropout_prob": 0.549355874947286,
+    "anneal_cap": 0.2,
+    "learning_rate": 0.00030935886352908095
+  },
+  "validation_metrics": {
+    "recall@5": 0.0864,
+    "ndcg@5": 0.0575
+  },
+  "test_metrics": {
+    "recall@5": 0.0817,
+    "ndcg@5": 0.055
+  },
+  "iterations_summary": [
+    {
+      "iteration": 1,
+      "recall@5": 0.0864,
+      "improvement": -0.0005999999999999894
+    },
+    {
+      "iteration": 2,
+      "recall@5": 0.086,
+      "improvement": -0.0010000000000000009
+    },
+    {
+      "iteration": 3,
+      "recall@5": 0.0863,
+      "improvement": -0.0006999999999999923
+    }
+  ],
+  "timestamp": "2025-11-23 11:21:17"
+}

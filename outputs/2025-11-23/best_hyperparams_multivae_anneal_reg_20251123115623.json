@@ -1,0 +1,42 @@
+{
+  "hyperparameters": {
+    "latent_dimension": 128,
+    "mlp_hidden_size": [
+      600
+    ],
+    "dropout_prob": 0.265064016135034,
+    "anneal_cap": 0.2,
+    "learning_rate": 0.0005531511770699596,
+    "total_anneal_steps": 100000,
+    "weight_decay": 5.470981529856374e-06
+  },
+  "validation_metrics": {
+    "recall@5": 0.087,
+    "ndcg@5": 0.0577,
+    "recall@10": 0.1317
+  },
+  "improvement_vs_baseline": {
+    "baseline_recall@5": 0.087,
+    "improvement_pct": 0.0
+  },
+  "anneal_steps_analysis": {
+    "100000": {
+      "mean": 0.08649444444444444,
+      "count": 18
+    },
+    "200000": {
+      "mean": 0.08616666666666667,
+      "count": 3
+    },
+    "400000": {
+      "mean": 0.08583333333333333,
+      "count": 3
+    },
+    "50000": {
+      "mean": 0.0858,
+      "count": 6
+    }
+  },
+  "timestamp": "2025-11-23 11:56:23",
+  "experiment": "Annealing + Regularization"
+}

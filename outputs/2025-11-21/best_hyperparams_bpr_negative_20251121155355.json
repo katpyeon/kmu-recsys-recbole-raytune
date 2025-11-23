@@ -1,0 +1,18 @@
+{
+  "hyperparameters": {
+    "embedding_size": 64,
+    "learning_rate": 0.0009352800142188924,
+    "reg_weight": 0.008879779525122986
+  },
+  "validation_metrics": {
+    "recall@5": 0.0,
+    "ndcg@5": 0.0,
+    "recall@10": 0.0
+  },
+  "timestamp": "2025-11-21 15:53:55",
+  "model": "BPR",
+  "dataset": "kaggle_recsys_with_negatives",
+  "negative_sampling": true,
+  "device": "cuda",
+  "num_trials": 3
+}

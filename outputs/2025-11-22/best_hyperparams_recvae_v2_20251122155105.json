@@ -1,0 +1,20 @@
+{
+  "hyperparameters": {
+    "hidden_dimension": 600,
+    "latent_dimension": 256,
+    "dropout_prob": 0.48747039536786624,
+    "gamma": 0.008826869864003366,
+    "n_enc_epochs": 3,
+    "learning_rate": 0.00990077607047
+  },
+  "validation_metrics": {
+    "recall@5": 0.0869,
+    "ndcg@5": 0.0578,
+    "recall@10": 0.1302
+  },
+  "timestamp": "2025-11-22 15:51:05",
+  "model": "RecVAE",
+  "version": "Phase 1 v2",
+  "device": "cuda",
+  "num_trials": 50
+}

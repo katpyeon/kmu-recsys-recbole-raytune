@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-RecBole AutoML - MultiVAE Hyperparameter Optimization with Ray Tune (v2 - Phase 1 Improvements)
+RecBole AutoML - MultiVAE Hyperparameter Optimization with Ray Tune (v4 - Data & Search Space Improvements)
 
 희소성 99.9% 데이터셋에 대한 MultiVAE 하이퍼파라미터 최적화
 - 평가 지표: Recall@5
@@ -8,11 +8,18 @@ RecBole AutoML - MultiVAE Hyperparameter Optimization with Ray Tune (v2 - Phase 
 - 디바이스: CUDA → MPS → CPU 자동 선택
 - 모델: MultiVAE (Variational Autoencoders for Collaborative Filtering)
 
-🔧 Phase 1 개선사항 (예상 +20-32% 성능 향상):
+🔧 Phase 1 개선사항:
 1. Learning Rate 범위 20배 확대: [1e-4, 1e-2] → [0.001, 0.03]
 2. Dropout 0.5 중심으로 조정: [0.3, 0.7] → [0.45, 0.65]
 3. anneal_cap 확대: [0.1, 0.2, 0.3] → [0.2, 0.3, 0.5, 1.0]
 4. Trials 증가: 30 → 50
+
+✨ Phase 2 개선사항 (v4에 적용):
+1. 데이터 전처리: 최소 상호작용 횟수 (e.g., 5회) 미만 사용자/아이템 제거 (Core-filtering)
+2. 하이퍼파라미터 탐색 공간 확장:
+    - mlp_hidden_size: 더 깊은 구조 추가 (e.g., [[512, 256]])
+    - anneal_cap: 연속적인 범위로 확장 (e.g., tune.uniform(0.1, 0.5))
+    - num_samples: 50 -> 100으로 증가
 """
 
 import os
@@ -76,9 +83,9 @@ print("RecBole AutoML with Ray Tune - MultiVAE")
 print("=" * 60)
 print("✅ 라이브러리 로드 완료\n")
 
-# ============================================================
+# ============================================================ 
 # 1. 디바이스 자동 선택
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("1. 디바이스 선택")
 print("=" * 60)
@@ -95,9 +102,9 @@ else:
 
 print(f"PyTorch version: {torch.__version__}\n")
 
-# ============================================================
+# ============================================================ 
 # 2. Ray 초기화
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("2. Ray 초기화")
 print("=" * 60)
@@ -141,9 +148,9 @@ ray.init(
 print("✅ Ray 초기화 완료")
 print(f"   사용 가능한 리소스: {ray.available_resources()}\n")
 
-# ============================================================
+# ============================================================ 
 # 3. 데이터 로딩 및 전처리
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("3. 데이터 로딩 및 전처리")
 print("=" * 60)
@@ -158,15 +165,35 @@ df = pd.read_csv(train_file)
 df.columns = [col.replace('\ufeff', '') for col in df.columns]
 
 print(f"✅ 데이터 로드 완료")
-print(f"   Total interactions: {len(df):,}")
-print(f"   Unique users: {df['user_id'].nunique():,}")
-print(f"   Unique items: {df['item_id'].nunique():,}")
-print(f"   Sparsity: {1 - len(df) / (df['user_id'].nunique() * df['item_id'].nunique()):.4%}")
+print(f"   Total interactions (original): {len(df):,}")
+print(f"   Unique users (original): {df['user_id'].nunique():,}")
+print(f"   Unique items (original): {df['item_id'].nunique():,}")
+print(f"   Sparsity (original): {1 - len(df) / (df['user_id'].nunique() * df['item_id'].nunique()):.4%}")
+
+# --- Core-filtering 적용 (Phase 2 개선) ---
+min_interactions = 5 # 최소 상호작용 횟수
+
+# 사용자별 상호작용 횟수 계산 및 필터링
+user_counts = df['user_id'].value_counts()
+frequent_users = user_counts[user_counts >= min_interactions].index
+df_filtered_users = df[df['user_id'].isin(frequent_users)]
+
+# 아이템별 상호작용 횟수 계산 및 필터링
+item_counts = df_filtered_users['item_id'].value_counts()
+frequent_items = item_counts[item_counts >= min_interactions].index
+df_filtered = df_filtered_users[df_filtered_users['item_id'].isin(frequent_items)]
+
+print(f"   ✅ Core-filtering 적용 (min_interactions={min_interactions})")
+print(f"   Total interactions (filtered): {len(df_filtered):,}")
+print(f"   Unique users (filtered): {df_filtered['user_id'].nunique():,}")
+print(f"   Unique items (filtered): {df_filtered['item_id'].nunique():,}")
+print(f"   Sparsity (filtered): {1 - len(df_filtered) / (df_filtered['user_id'].nunique() * df_filtered['item_id'].nunique()):.4%}")
+
 
 # RecBole 형식으로 변환
 df_recbole = pd.DataFrame({
-    'user_id:token': df['user_id'],
-    'item_id:token': df['item_id'],
+    'user_id:token': df_filtered['user_id'],
+    'item_id:token': df_filtered['item_id'],
     'rating:float': 1.0
 })
 
@@ -183,9 +210,9 @@ print(f"   파일: {inter_file}")
 print(f"   형식: Tab-separated (.inter)")
 print(f"   소요 시간: {time.time() - start_time:.2f}초\n")
 
-# ============================================================
+# ============================================================ 
 # 4. Ray Tune 설정
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("4. Ray Tune 설정")
 print("=" * 60)
@@ -241,19 +268,19 @@ base_config = {
     'worker': 4,           # DataLoader 병렬 처리 (CPU 데이터 로딩 가속)
 }
 
-# 하이퍼파라미터 탐색 공간 (Phase 1 개선)
+# 하이퍼파라미터 탐색 공간 (Phase 1 + 2 개선)
 # 출처: Liang et al., "Variational Autoencoders for Collaborative Filtering", WWW 2018
 # + Kaggle 소매 데이터 분석 결과
 search_space = {
     'latent_dimension': tune.choice([128, 200, 256]),      # 논문: 200, 기본: 128
-    'mlp_hidden_size': tune.choice([[600], [512]]),        # 논문: [600] (단일 은닉층 최적)
+    'mlp_hidden_size': tune.choice([[600], [512], [512, 256]]),        # 🔧 Phase 2: 더 깊은 구조 추가
     'dropout_prob': tune.uniform(0.45, 0.65),              # 🔧 Phase 1: 0.5 중심 (희소 데이터 정규화)
-    'anneal_cap': tune.choice([0.2, 0.3, 0.5, 1.0]),       # 🔧 Phase 1: KL 가중치 확대
+    'anneal_cap': tune.uniform(0.1, 0.5),       # 🔧 Phase 2: KL 가중치 연속 범위로 확장
     'learning_rate': tune.loguniform(0.001, 0.03),         # 🔧 Phase 1: 범위 20배 확대 (Critical!)
 }
 
 print(f"✅ 기본 설정 완료")
-print(f"   모델: {MODEL_NAME} v2 (Phase 1 개선)")
+print(f"   모델: {MODEL_NAME} v4 (Phase 1 & 2 개선)")
 print(f"   타겟 메트릭: Recall@5")
 print(f"   디바이스: {device}")
 print(f"\n⚡ 성능 최적화 적용:")
@@ -261,17 +288,17 @@ print(f"   • 배치 크기: train={train_batch_size}, eval={eval_batch_size}")
 print(f"   • DataLoader workers: 4 (병렬 데이터 로딩)")
 print(f"   • cuDNN benchmark: 활성화 (1.3~1.7배 가속)")
 print(f"   • 예상 총 속도 향상: 2~4배")
-print(f"\n🔍 하이퍼파라미터 탐색 공간 (Phase 1 개선):")
+print(f"\n🔍 하이퍼파라미터 탐색 공간 (Phase 1 & 2 개선):")
 print(f"   latent_dimension: [128, 200, 256] (논문: 200)")
-print(f"   mlp_hidden_size: [[600], [512]] (논문: [600])")
+print(f"   mlp_hidden_size: [[600], [512], [512, 256]] ✨ (더 깊은 구조 추가)")
 print(f"   dropout_prob: [0.45, 0.65] 🔧 (0.5 중심, 희소 데이터 정규화)")
-print(f"   anneal_cap: [0.2, 0.3, 0.5, 1.0] 🔧 (KL 가중치 확대)")
+print(f"   anneal_cap: [0.1, 0.5] ✨ (KL 가중치 연속 범위로 확장)")
 print(f"   learning_rate: [0.001, 0.03] 🔧 (Critical! 20배 확대)")
-print(f"\n💡 예상 성능 향상: Recall@5 0.087 → 0.105-0.115 (+20-32%)\n")
+print(f"\n💡 예상 성능 향상: Recall@5 0.087 → 0.105-0.115 (+20-32%) -> v4 추가 개선\n")
 
-# ============================================================
+# ============================================================ 
 # 5. Trainable 함수 정의
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("5. Trainable 함수 정의")
 print("=" * 60)
@@ -324,9 +351,9 @@ def train_recbole(config_params):
 
 print("✅ Trainable 함수 정의 완료\n")
 
-# ============================================================
+# ============================================================ 
 # 6. Ray Tune AutoML 실행
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("6. Ray Tune 하이퍼파라미터 최적화 시작")
 print("=" * 60)
@@ -384,11 +411,11 @@ tuner = tune.Tuner(
     tune_config=tune.TuneConfig(
         scheduler=scheduler,
         search_alg=search_alg,
-        num_samples=30,  # MultiVAE 탐색 공간에 맞게 설정
+        num_samples=100,  # ✨ Phase 2: Trials 증가 (30 -> 100)
         max_concurrent_trials=max_concurrent_trials,
     ),
     run_config=RunConfig(
-        name='recbole_multivae_automl',
+        name='recbole_multivae_automl_v4', # v4 버전으로 이름 변경
         storage_path=ray_results_path,
     ),
 )
@@ -401,9 +428,9 @@ print("✅ Ray Tune 최적화 완료")
 print(f"   소요 시간: {time.time() - start_time:.2f}초")
 print("=" * 60 + "\n")
 
-# ============================================================
+# ============================================================ 
 # 7. 최적 하이퍼파라미터 추출
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("7. 최적 하이퍼파라미터 추출")
 print("=" * 60)
@@ -429,7 +456,7 @@ import json
 t_params = pd.Timestamp.now()
 params_output_dir = f"outputs/{t_params.year}-{t_params.month:02d}-{t_params.day:02d}"
 os.makedirs(params_output_dir, exist_ok=True)
-params_filename = f"{params_output_dir}/best_hyperparams_multivae_{t_params.year}{t_params.month:02d}{t_params.day:02d}{t_params.hour:02d}{t_params.minute:02d}{t_params.second:02d}.json"
+params_filename = f"{params_output_dir}/best_hyperparams_multivae_v4_{t_params.year}{t_params.month:02d}{t_params.day:02d}{t_params.hour:02d}{t_params.minute:02d}{t_params.second:02d}.json"
 
 best_params_to_save = {
     'hyperparameters': {
@@ -445,7 +472,7 @@ best_params_to_save = {
         'recall@10': float(best_metrics['recall@10'])
     },
     'timestamp': t_params.strftime('%Y-%m-%d %H:%M:%S'),
-    'model': MODEL_NAME,
+    'model': MODEL_NAME + "_v4", # v4 버전으로 모델 이름 변경
     'device': device,
     'num_trials': len(results.get_dataframe())
 }
@@ -455,9 +482,9 @@ with open(params_filename, 'w') as f:
 
 print(f"\n💾 최적 파라미터 저장 완료: {params_filename}\n")
 
-# ============================================================
+# ============================================================ 
 # 8. 최적 모델로 최종 학습
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("8. 최적 모델로 최종 학습")
 print("=" * 60)
@@ -498,9 +525,9 @@ print(f"   Recall@5:  {test_result['recall@5']:.4f}")
 print(f"   NDCG@5:    {test_result['ndcg@5']:.4f}")
 print(f"   Recall@10: {test_result['recall@10']:.4f}\n")
 
-# ============================================================
+# ============================================================ 
 # 9. 전체 사용자 추천 생성
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("9. 전체 사용자 추천 생성")
 print("=" * 60)
@@ -539,9 +566,9 @@ print(f"   총 사용자 수: {len(all_recommendations):,}")
 print(f"   사용자당 추천 수: {topk}")
 print(f"   소요 시간: {time.time() - start_time:.2f}초\n")
 
-# ============================================================
+# ============================================================ 
 # 10. 제출 파일 생성
-# ============================================================
+# ============================================================ 
 print("=" * 60)
 print("10. 제출 파일 생성")
 print("=" * 60)
@@ -560,7 +587,7 @@ print(f"   사용자당 추천 수: {topk}")
 t = pd.Timestamp.now()
 output_dir = f"outputs/{t.year}-{t.month:02d}-{t.day:02d}"
 os.makedirs(output_dir, exist_ok=True)
-filename = f"{output_dir}/submit_{MODEL_NAME}_RayTune_{t.year}{t.month:02d}{t.day:02d}{t.hour:02d}{t.minute:02d}{t.second:02d}.csv"
+filename = f"{output_dir}/submit_{MODEL_NAME}_v4_RayTune_{t.year}{t.month:02d}{t.day:02d}{t.hour:02d}{t.minute:02d}{t.second:02d}.csv" # v4 버전으로 파일명 변경
 
 submission.to_csv(filename, index=False)
 
@@ -573,9 +600,9 @@ print(f"테스트 Recall@5: {test_result['recall@5']:.4f}")
 print(f"소요 시간: {time.time() - start_time:.2f}초")
 print("=" * 60)
 
-# ============================================================
+# ============================================================ 
 # 11. 결과 요약
-# ============================================================
+# ============================================================ 
 print("\n" + "=" * 60)
 print("Ray Tune AutoML 최적화 결과 요약 - MultiVAE")
 print("=" * 60)
@@ -583,13 +610,13 @@ print("=" * 60)
 results_df = results.get_dataframe()
 
 print(f"\n📊 데이터셋 정보:")
-print(f"   사용자 수: {df['user_id'].nunique():,}")
-print(f"   아이템 수: {df['item_id'].nunique():,}")
-print(f"   상호작용 수: {len(df):,}")
-print(f"   희소성: {1 - len(df) / (df['user_id'].nunique() * df['item_id'].nunique()):.4%}")
+print(f"   사용자 수: {df_filtered['user_id'].nunique():,}") # 필터링된 사용자 수 출력
+print(f"   아이템 수: {df_filtered['item_id'].nunique():,}") # 필터링된 아이템 수 출력
+print(f"   상호작용 수: {len(df_filtered):,}") # 필터링된 상호작용 수 출력
+print(f"   희소성: {1 - len(df_filtered) / (df_filtered['user_id'].nunique() * df_filtered['item_id'].nunique()):.4%}") # 필터링된 희소성 출력
 
 print(f"\n🤖 AutoML 정보:")
-print(f"   모델: {MODEL_NAME}")
+print(f"   모델: {MODEL_NAME}_v4") # v4 버전으로 모델 이름 변경
 print(f"   디바이스: {device}")
 print(f"   AutoML 방식: Ray Tune (ASHA + Optuna TPE)")
 print(f"   총 시도 횟수: {len(results_df)}")
@@ -611,7 +638,7 @@ print(f"   테스트 NDCG@5: {test_result['ndcg@5']:.4f}")
 print(f"\n💾 출력 파일:")
 print(f"   제출 파일: {filename}")
 print(f"   최적 파라미터: {params_filename}")
-print(f"   Ray Tune 결과: {ray_results_path}/recbole_multivae_automl/")
+print(f"   Ray Tune 결과: {ray_results_path}/recbole_multivae_automl_v4/") # v4 버전으로 경로 변경
 
 print("\n📊 상위 5개 Trial 결과:")
 top5 = results_df.nlargest(5, 'recall@5')[['config/latent_dimension', 'config/mlp_hidden_size',
